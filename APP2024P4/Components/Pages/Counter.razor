@@ -1,0 +1,116 @@
+﻿@page "/counter"
+@using System.ComponentModel.DataAnnotations
+
+@inject ILogger<Counter> Logger
+
+<PageTitle>Reservas
+</PageTitle>
+
+<h1>Asignar Reserva</h1>
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <section class="assign-task-form">
+            <EditForm Model="TaskAssignment" OnValidSubmit="HandleTaskAssignment">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+
+                <!-- Seleccion de Empledo -->
+                <div class="form-group mb-3">
+                    <label for="employee" class="form-label">Seleccionar Empleado</label>
+                    <InputSelect @bind-Value="TaskAssignment.EmployeeId" class="form-control" id="employee">
+                        <option value=""> Nombre de Empleado </option>
+                        @foreach (var employee in Employees)
+
+                        {
+                            <option value="@employee.Id">@employee.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => TaskAssignment.EmployeeId" class="text-danger" />
+                </div>
+
+                <!-- Task Description -->
+                <div class="form-group mb-3">
+                    <label for="taskDescription" class="form-label">Descripcion</label>
+                    <InputTextArea @bind-Value="TaskAssignment.TaskDescription" class="form-control" id="taskDescription" placeholder="Detalles de la reserva" />
+                    <ValidationMessage For="() => TaskAssignment.TaskDescription" class="text-danger" />
+                </div>
+
+                <!-- Submit Button -->
+                <div>
+                    <button type="submit" class="btn btn-primary w-100">Asignar</button>
+                </div>
+            </EditForm>
+            @if (!string.IsNullOrEmpty(SuccessMessage))
+            {
+                <p class="text-success mt-3">@SuccessMessage</p>
+            }
+        </section>
+    </div>
+</div>
+
+@code {
+    // Sample list of employees
+
+    private List<Employee> Employees = new()
+    {
+        new Employee { Id = 1, Name = "John Doe" },
+        new Employee { Id = 2, Name = "Jane Smith" },
+        new Employee { Id = 3, Name = "Robert Brown" }
+    };
+
+
+
+    private TaskAssignmentModel TaskAssignment { get; set; } = new();
+
+    private string? SuccessMessage;
+
+
+
+    private void HandleTaskAssignment()
+
+    {
+
+        // Logging the assignment (in real applications, save to database)
+
+        Logger.LogInformation($"Task assigned to Employee ID {TaskAssignment.EmployeeId}: {TaskAssignment.TaskDescription}");
+
+
+
+        // Success message
+
+        SuccessMessage = "Task has been successfully assigned!";
+
+    }
+
+
+
+    private class Employee
+
+    {
+
+        public int Id { get; set; }
+
+        public string? Name { get; set; }
+
+    }
+
+
+
+    private class TaskAssignmentModel
+
+    {
+
+        [Required(ErrorMessage = "Please select an employee.")]
+
+        public int EmployeeId { get; set; }
+
+
+
+        [Required(ErrorMessage = "Task description is required.")]
+
+        [StringLength(200, ErrorMessage = "Task description can't be longer than 200 characters.")]
+
+        public string TaskDescription { get; set; } = string.Empty;
+
+    }
+}
