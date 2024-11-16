@@ -1,116 +1,142 @@
 ﻿@page "/counter"
+
 @using System.ComponentModel.DataAnnotations
 
 @inject ILogger<Counter> Logger
 
-<PageTitle>Reservas
-</PageTitle>
+<PageTitle>Reservations</PageTitle>
 
-<h1>Asignar Reserva</h1>
-<div class="row">
-    <div class="col-md-6 offset-md-3">
-        <section class="assign-task-form">
-            <EditForm Model="TaskAssignment" OnValidSubmit="HandleTaskAssignment">
-                <DataAnnotationsValidator />
-                <ValidationSummary class="text-danger" />
+<div class="container mt-4">
+    <h1 class="text-center mb-4">Employee Reservations</h1>
 
-                <!-- Seleccion de Empledo -->
-                <div class="form-group mb-3">
-                    <label for="employee" class="form-label">Seleccionar Empleado</label>
-                    <InputSelect @bind-Value="TaskAssignment.EmployeeId" class="form-control" id="employee">
-                        <option value=""> Nombre de Empleado </option>
-                        @foreach (var employee in Employees)
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col">Employee</th>
+                    <th scope="col">Time</th>
+                    <th scope="col">Service</th>
+                    <th scope="col">Client</th>
+                    <th scope="col" class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var employee in Employees)
+                {
+                    foreach (var reservation in employee.Reservations)
+                    {
+                        <tr>
+                            <td>@employee.Name</td>
+                            <td>@reservation.DateTime.ToString("g")</td>
+                            <td>@reservation.ServiceType</td>
+                            <td>@reservation.ClientName</td>
+                            <td class="text-center">
+                                <button class="btn btn-outline-success rounded-circle" data-bs-toggle="modal" data-bs-target="#addReservationModal" onclick="selectEmployee(@employee.Id)">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
 
-                        {
-                            <option value="@employee.Id">@employee.Name</option>
-                        }
-                    </InputSelect>
-                    <ValidationMessage For="() => TaskAssignment.EmployeeId" class="text-danger" />
-                </div>
-
-                <!-- Task Description -->
-                <div class="form-group mb-3">
-                    <label for="taskDescription" class="form-label">Descripcion</label>
-                    <InputTextArea @bind-Value="TaskAssignment.TaskDescription" class="form-control" id="taskDescription" placeholder="Detalles de la reserva" />
-                    <ValidationMessage For="() => TaskAssignment.TaskDescription" class="text-danger" />
-                </div>
-
-                <!-- Submit Button -->
-                <div>
-                    <button type="submit" class="btn btn-primary w-100">Asignar</button>
-                </div>
-            </EditForm>
-            @if (!string.IsNullOrEmpty(SuccessMessage))
-            {
-                <p class="text-success mt-3">@SuccessMessage</p>
-            }
-        </section>
+<!-- Modal for Adding Reservation -->
+<div class="modal fade" id="addReservationModal" tabindex="-1" aria-labelledby="addReservationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addReservationModalLabel">Assign Reservation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="NewReservation" OnValidSubmit="AddReservation">
+                    <DataAnnotationsValidator />
+                    <div class="mb-3">
+                        <label for="reservationDate" class="form-label">Select Date and Time</label>
+                        <InputDate @bind-Value="NewReservation.DateTime" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="serviceType" class="form-label">Service Type</label>
+                        <InputText @bind-Value="NewReservation.ServiceType" class="form-control" placeholder="e.g., Exterior Wash" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="clientName" class="form-label">Client Name</label>
+                        <InputText @bind-Value="NewReservation.ClientName" class="form-control" placeholder="e.g., John Doe" />
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Save Reservation</button>
+                </EditForm>
+            </div>
+        </div>
     </div>
 </div>
 
 @code {
-    // Sample list of employees
-
-    private List<Employee> Employees = new()
+    private List<Employee> Employees { get; set; } = new List<Employee>
     {
-        new Employee { Id = 1, Name = "John Doe" },
-        new Employee { Id = 2, Name = "Jane Smith" },
-        new Employee { Id = 3, Name = "Robert Brown" }
+        new Employee { Id = 1, Name = "John Doe", Reservations = new List<Reservation> {
+            new Reservation { DateTime = DateTime.Now.AddHours(2), ServiceType = "Exterior Wash", ClientName = "Alice Brown" }
+        }},
+        new Employee { Id = 2, Name = "Jane Smith", Reservations = new List<Reservation>
+        {
+            new Reservation { DateTime = DateTime.Now.AddHours(3), ServiceType = "Interior Cleaning", ClientName = "Bob Green" }
+        }},
+        new Employee { Id = 3, Name = "Mark Johnson", Reservations = new List<Reservation>() }
     };
 
+    private Reservation NewReservation { get; set; } = new();
+    private int SelectedEmployeeId { get; set; }
 
-
-    private TaskAssignmentModel TaskAssignment { get; set; } = new();
-
-    private string? SuccessMessage;
-
-
-
-    private void HandleTaskAssignment()
-
+    private void selectEmployee(int employeeId)
     {
-
-        // Logging the assignment (in real applications, save to database)
-
-        Logger.LogInformation($"Task assigned to Employee ID {TaskAssignment.EmployeeId}: {TaskAssignment.TaskDescription}");
-
-
-
-        // Success message
-
-        SuccessMessage = "Task has been successfully assigned!";
-
+        SelectedEmployeeId = employeeId;
+        NewReservation = new Reservation(); // Reset form
     }
 
+    private void AddReservation()
+    {
+        var employee = Employees.FirstOrDefault(e => e.Id == SelectedEmployeeId);
+        if (employee == null)
+        {
+            Logger.LogError($"Employee with ID {SelectedEmployeeId} not found.");
+            return;
+        }
 
+        // Check for conflicting reservations
+        if (employee.Reservations.Any(r => r.DateTime == NewReservation.DateTime))
+        {
+            Logger.LogWarning("Reservation conflict detected.");
+            return;
+        }
+
+        employee.Reservations.Add(new Reservation
+            {
+                DateTime = NewReservation.DateTime,
+                ServiceType = NewReservation.ServiceType,
+                ClientName = NewReservation.ClientName
+            });
+    }
 
     private class Employee
-
     {
-
         public int Id { get; set; }
-
-        public string? Name { get; set; }
-
+        public string Name { get; set; } = string.Empty;
+        public List<Reservation> Reservations { get; set; } = new();
     }
 
-
-
-    private class TaskAssignmentModel
-
+    private class Reservation
     {
+        [Required]
+        public DateTime DateTime { get; set; }
 
-        [Required(ErrorMessage = "Please select an employee.")]
+        [Required]
+        [StringLength(50)]
+        public string ServiceType { get; set; } = string.Empty;
 
-        public int EmployeeId { get; set; }
-
-
-
-        [Required(ErrorMessage = "Task description is required.")]
-
-        [StringLength(200, ErrorMessage = "Task description can't be longer than 200 characters.")]
-
-        public string TaskDescription { get; set; } = string.Empty;
-
+        [Required]
+        [StringLength(100)]
+        public string ClientName { get; set; } = string.Empty;
     }
 }
